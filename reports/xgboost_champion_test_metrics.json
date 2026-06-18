@@ -1,0 +1,14 @@
+{
+    "threshold": 0.12,
+    "accuracy": 0.9995259997893332,
+    "precision": 0.865979381443299,
+    "recall": 0.8571428571428571,
+    "f1_score": 0.8615384615384616,
+    "roc_auc": 0.9869249437253799,
+    "pr_auc": 0.8797256611019557,
+    "true_negatives": 56851,
+    "false_positives": 13,
+    "false_negatives": 14,
+    "true_positives": 84,
+    "business_cost": 71300
+}

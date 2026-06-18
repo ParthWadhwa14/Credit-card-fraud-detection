@@ -1,0 +1,11 @@
+{
+    "champion_model_name": "xgboost_weighted",
+    "champion_model_path": "models/tuned_xgboost_weighted.pkl",
+    "selected_trial_number": 67,
+    "validation_objective_pr_auc": 0.8486133357559057,
+    "deployment_threshold": 0.12,
+    "threshold_source": "best_cost_threshold",
+    "false_negative_cost": 5000,
+    "false_positive_cost": 100,
+    "selection_reason": "Selected weighted XGBoost as the production-focused fraud detection model because it maintained strong PR-AUC while minimizing false positives, reducing customer friction from unnecessary fraud alerts."
+}

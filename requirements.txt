@@ -19,7 +19,11 @@ mlflow
 xgboost
 lightgbm
 catboost
+imbalanced-learn
 
+fastapi 
+uvicorn 
+pydantic
 
-
-
+requests
+python-multipart
