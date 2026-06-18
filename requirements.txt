@@ -27,3 +27,6 @@ pydantic
 
 requests
 python-multipart
+
+prometheus-fastapi-instrumentator
+prometheus-client

@@ -3,15 +3,25 @@ import json
 from typing import List
 
 import joblib
-import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Counter, Histogram
+
+
+# ---------------------------------------------------------
+# Paths
+# ---------------------------------------------------------
 
 MODEL_PATH = Path("models/tuned_xgboost_weighted.pkl")
 CONFIG_PATH = Path("reports/xgboost_champion_config.json")
 
+
+# ---------------------------------------------------------
+# Feature order used during training
+# ---------------------------------------------------------
 
 FEATURE_COLUMNS = [
     "Time",
@@ -25,12 +35,48 @@ FEATURE_COLUMNS = [
 ]
 
 
+# ---------------------------------------------------------
+# FastAPI app
+# ---------------------------------------------------------
+
 app = FastAPI(
     title="Fraud Detection API",
-    description="Production-focused XGBoost fraud detection API",
+    description="Production-focused XGBoost fraud detection API with Prometheus monitoring",
     version="1.0.0",
 )
 
+
+# ---------------------------------------------------------
+# Prometheus default HTTP metrics
+# ---------------------------------------------------------
+
+Instrumentator().instrument(app).expose(app)
+
+
+# ---------------------------------------------------------
+# Custom ML monitoring metrics
+# ---------------------------------------------------------
+
+PREDICTION_COUNTER = Counter(
+    "fraud_predictions_total",
+    "Total number of fraud prediction requests"
+)
+
+FRAUD_FLAG_COUNTER = Counter(
+    "fraud_flags_total",
+    "Total number of transactions flagged as fraud"
+)
+
+PREDICTION_CONFIDENCE = Histogram(
+    "fraud_prediction_probability",
+    "Distribution of predicted fraud probabilities",
+    buckets=[0.01, 0.05, 0.10, 0.20, 0.40, 0.60, 0.80, 0.90, 0.95, 0.99]
+)
+
+
+# ---------------------------------------------------------
+# Request and response schemas
+# ---------------------------------------------------------
 
 class TransactionRequest(BaseModel):
     features: List[float] = Field(
@@ -45,6 +91,10 @@ class PredictionResponse(BaseModel):
     risk_level: str
     threshold: float
 
+
+# ---------------------------------------------------------
+# Load model and config
+# ---------------------------------------------------------
 
 def load_config():
     if not CONFIG_PATH.exists():
@@ -65,6 +115,43 @@ model = load_model()
 config = load_config()
 DEPLOYMENT_THRESHOLD = float(config["deployment_threshold"])
 
+
+# ---------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------
+
+def get_risk_level(fraud_probability: float, prediction: int) -> str:
+    if fraud_probability >= 0.80:
+        return "high"
+
+    if prediction == 1:
+        return "medium"
+
+    return "low"
+
+
+def validate_feature_length(features: List[float]):
+    expected = len(FEATURE_COLUMNS)
+    actual = len(features)
+
+    if actual != expected:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expected {expected} features, got {actual}."
+        )
+
+
+def update_prediction_metrics(fraud_probability: float, prediction: int):
+    PREDICTION_COUNTER.inc()
+    PREDICTION_CONFIDENCE.observe(fraud_probability)
+
+    if prediction == 1:
+        FRAUD_FLAG_COUNTER.inc()
+
+
+# ---------------------------------------------------------
+# API endpoints
+# ---------------------------------------------------------
 
 @app.get("/")
 def root():
@@ -98,23 +185,15 @@ def model_info():
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: TransactionRequest):
-    if len(request.features) != len(FEATURE_COLUMNS):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Expected {len(FEATURE_COLUMNS)} features, got {len(request.features)}."
-        )
+    validate_feature_length(request.features)
 
     X = pd.DataFrame([request.features], columns=FEATURE_COLUMNS)
 
     fraud_probability = float(model.predict_proba(X)[:, 1][0])
     prediction = int(fraud_probability >= DEPLOYMENT_THRESHOLD)
+    risk_level = get_risk_level(fraud_probability, prediction)
 
-    if fraud_probability >= 0.80:
-        risk_level = "high"
-    elif fraud_probability >= DEPLOYMENT_THRESHOLD:
-        risk_level = "medium"
-    else:
-        risk_level = "low"
+    update_prediction_metrics(fraud_probability, prediction)
 
     return PredictionResponse(
         fraud_probability=fraud_probability,
@@ -129,12 +208,7 @@ def predict_batch(requests: List[TransactionRequest]):
     rows = []
 
     for request in requests:
-        if len(request.features) != len(FEATURE_COLUMNS):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Expected {len(FEATURE_COLUMNS)} features, got {len(request.features)}."
-            )
-
+        validate_feature_length(request.features)
         rows.append(request.features)
 
     X = pd.DataFrame(rows, columns=FEATURE_COLUMNS)
@@ -145,16 +219,15 @@ def predict_batch(requests: List[TransactionRequest]):
     results = []
 
     for prob, pred in zip(probabilities, predictions):
-        if prob >= 0.80:
-            risk_level = "high"
-        elif prob >= DEPLOYMENT_THRESHOLD:
-            risk_level = "medium"
-        else:
-            risk_level = "low"
+        prob = float(prob)
+        pred = int(pred)
+
+        risk_level = get_risk_level(prob, pred)
+        update_prediction_metrics(prob, pred)
 
         results.append({
-            "fraud_probability": float(prob),
-            "prediction": int(pred),
+            "fraud_probability": prob,
+            "prediction": pred,
             "risk_level": risk_level,
             "threshold": DEPLOYMENT_THRESHOLD,
         })
