@@ -6,13 +6,11 @@ __pycache__
 *.pyc
 .ipynb_checkpoints
 
-data/raw
-data/processed
-notebooks
-reports/figures
-mlruns
+data/raw/
+notebooks/
+reports/figures/
+mlruns/
 mlflow.db
 
-*.csv
 *.ipynb
 .DS_Store

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-streamlit-deployment
+  namespace: fraud-detection
+  labels:
+    app: fraud-streamlit-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fraud-streamlit-ui
+  template:
+    metadata:
+      labels:
+        app: fraud-streamlit-ui
+    spec:
+      containers:
+        - name: fraud-streamlit-ui
+          image: fraud-streamlit-ui:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8501
+
+          env:
+            - name: FASTAPI_URL
+              value: "http://fraud-api-service"
+            - name: PUBLIC_API_URL
+              value: "http://localhost:8000"
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "700m"
+              memory: "1Gi"
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8501
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8501
+            initialDelaySeconds: 30
+            periodSeconds: 20

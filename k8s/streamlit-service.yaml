@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fraud-streamlit-service
+  namespace: fraud-detection
+spec:
+  selector:
+    app: fraud-streamlit-ui
+  ports:
+    - protocol: TCP
+      port: 8501
+      targetPort: 8501
+  type: ClusterIP

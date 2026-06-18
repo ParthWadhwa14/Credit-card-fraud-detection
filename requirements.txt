@@ -30,3 +30,6 @@ python-multipart
 
 prometheus-fastapi-instrumentator
 prometheus-client
+
+streamlit
+
