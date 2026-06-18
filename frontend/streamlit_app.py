@@ -655,6 +655,10 @@ with tab3:
 # Tab 4: Monitoring
 # ---------------------------------------------------------
 
+# ---------------------------------------------------------
+# Tab 4: Monitoring
+# ---------------------------------------------------------
+
 with tab4:
     st.header("Monitoring")
 
@@ -662,20 +666,16 @@ with tab4:
 
     internal_metrics_url = f"{api_url}/metrics"
     public_metrics_url = f"{PUBLIC_API_URL}/metrics"
-    
+
     st.markdown("### Internal metrics URL")
-    st.write("Used by Streamlit container to talk to FastAPI:")
+    st.write("Used by the Streamlit app/container to talk to FastAPI:")
     st.code(internal_metrics_url)
-    
+
     st.markdown("### Browser metrics URL")
     st.write("Open this in your browser:")
     st.code(public_metrics_url)
-    
+
     st.markdown(f"[Open metrics endpoint in browser]({public_metrics_url})")
-
-    st.code(metrics_url)
-
-    st.markdown(f"[Open metrics endpoint]({metrics_url})")
 
     st.write("Important custom metrics:")
 
@@ -689,7 +689,7 @@ fraud_prediction_probability
 
     if st.button("Check Metrics Endpoint"):
         try:
-            response = requests.get(metrics_url, timeout=5)
+            response = requests.get(internal_metrics_url, timeout=5)
 
             if response.status_code == 200:
                 st.success("Metrics endpoint is working.")
