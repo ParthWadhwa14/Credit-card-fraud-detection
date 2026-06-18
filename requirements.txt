@@ -33,3 +33,7 @@ prometheus-client
 
 streamlit
 
+shap
+
+pytest
+httpx
