@@ -14,3 +14,12 @@ uvicorn
 pydantic
 joblib
 pytest
+
+mlflow
+xgboost
+lightgbm
+catboost
+
+
+
+
