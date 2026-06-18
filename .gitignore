@@ -1,14 +1,18 @@
-__pycache__/
-*.pyc
+# Keep full datasets ignored
+data/raw/*
+data/processed/*
 
-.env
-.venv/
-venv/
+# Keep test fixtures tracked for CI
+!tests/
+!tests/fixtures/
+!tests/fixtures/X_test_sample.csv
+!tests/fixtures/y_test_sample.csv
 
-data/raw/
-data/processed/
-models/
-mlruns/
+# Keep only deployment artifacts tracked
+models/*
+!models/tuned_xgboost_weighted.pkl
+!models/scaler.pkl
 
-.ipynb_checkpoints/
-.DS_Store
+reports/*
+!reports/xgboost_champion_config.json
+!reports/xgboost_champion_test_metrics.json

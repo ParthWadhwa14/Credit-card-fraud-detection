@@ -9,25 +9,31 @@ from app.main import app, FEATURE_COLUMNS
 
 client = TestClient(app)
 
-X_TEST_PATH = Path("data/processed/X_test.csv")
+PRIMARY_X_TEST_PATH = Path("data/processed/X_test.csv")
+FIXTURE_X_TEST_PATH = Path("tests/fixtures/X_test_sample.csv")
 
 
 def get_valid_features():
     """
     Load one valid processed test sample.
 
-    The FastAPI model expects exactly:
-    Time + V1-V28 + Amount + Hour + Day = 32 features
+    Priority:
+    1. data/processed/X_test.csv for local testing
+    2. tests/fixtures/X_test_sample.csv for GitHub Actions CI
     """
-    if not X_TEST_PATH.exists():
-        pytest.skip("data/processed/X_test.csv not found.")
+    if PRIMARY_X_TEST_PATH.exists():
+        path = PRIMARY_X_TEST_PATH
+    elif FIXTURE_X_TEST_PATH.exists():
+        path = FIXTURE_X_TEST_PATH
+    else:
+        pytest.skip("No processed test sample found.")
 
-    X_test = pd.read_csv(X_TEST_PATH)
+    X_test = pd.read_csv(path)
 
     missing_columns = [col for col in FEATURE_COLUMNS if col not in X_test.columns]
 
     if missing_columns:
-        pytest.skip(f"X_test.csv missing required columns: {missing_columns}")
+        pytest.skip(f"{path} missing required columns: {missing_columns}")
 
     return X_test.iloc[0][FEATURE_COLUMNS].astype(float).tolist()
 

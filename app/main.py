@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
-from typing import List
+from typing import List, Dict
+import shap
 
 import joblib
 import pandas as pd
@@ -12,7 +13,20 @@ from prometheus_client import Counter, Histogram
 
 
 # ---------------------------------------------------------
-# Paths
+class FeatureExplanation(BaseModel):
+    feature: str
+    value: float
+    shap_value: float
+    impact: str
+
+
+class ExplanationResponse(BaseModel):
+    fraud_probability: float
+    prediction: int
+    risk_level: str
+    threshold: float
+    base_value: float
+    top_features: List[FeatureExplanation]
 # ---------------------------------------------------------
 
 MODEL_PATH = Path("models/tuned_xgboost_weighted.pkl")
@@ -92,6 +106,20 @@ class PredictionResponse(BaseModel):
     threshold: float
 
 
+class FeatureExplanation(BaseModel):
+    feature: str
+    value: float
+    shap_value: float
+    impact: str
+
+
+class ExplanationResponse(BaseModel):
+    fraud_probability: float
+    prediction: int
+    risk_level: str
+    threshold: float
+    base_value: float
+    top_features: List[FeatureExplanation]
 # ---------------------------------------------------------
 # Load model and config
 # ---------------------------------------------------------
@@ -111,9 +139,71 @@ def load_model():
     return joblib.load(MODEL_PATH)
 
 
+def explain_transaction(features: List[float], top_n: int = 8) -> Dict:
+    validate_feature_length(features)
+
+    X = pd.DataFrame([features], columns=FEATURE_COLUMNS)
+
+    fraud_probability = float(model.predict_proba(X)[:, 1][0])
+    prediction = int(fraud_probability >= DEPLOYMENT_THRESHOLD)
+    risk_level = get_risk_level(fraud_probability, prediction)
+
+    shap_values = explainer.shap_values(X)
+
+    # SHAP output can differ by version/model type.
+    # For binary classification, sometimes it returns a list [class_0, class_1].
+    if isinstance(shap_values, list):
+        shap_values_for_fraud = shap_values[1][0]
+    else:
+        shap_values_for_fraud = shap_values[0]
+
+    base_value = explainer.expected_value
+
+    if isinstance(base_value, list):
+        base_value = float(base_value[1])
+    else:
+        try:
+            base_value = float(base_value)
+        except TypeError:
+            base_value = float(base_value[0])
+
+    explanation_rows = []
+
+    for feature, value, shap_value in zip(
+        FEATURE_COLUMNS,
+        X.iloc[0].tolist(),
+        shap_values_for_fraud,
+    ):
+        explanation_rows.append({
+            "feature": feature,
+            "value": float(value),
+            "shap_value": float(shap_value),
+            "impact": "increases fraud risk" if shap_value > 0 else "decreases fraud risk",
+            "abs_shap_value": abs(float(shap_value)),
+        })
+
+    explanation_rows = sorted(
+        explanation_rows,
+        key=lambda x: x["abs_shap_value"],
+        reverse=True,
+    )[:top_n]
+
+    for row in explanation_rows:
+        row.pop("abs_shap_value")
+
+    return {
+        "fraud_probability": fraud_probability,
+        "prediction": prediction,
+        "risk_level": risk_level,
+        "threshold": DEPLOYMENT_THRESHOLD,
+        "base_value": base_value,
+        "top_features": explanation_rows,
+    }
+
 model = load_model()
 config = load_config()
 DEPLOYMENT_THRESHOLD = float(config["deployment_threshold"])
+explainer = shap.TreeExplainer(model)
 
 
 # ---------------------------------------------------------
@@ -202,6 +292,17 @@ def predict(request: TransactionRequest):
         threshold=DEPLOYMENT_THRESHOLD,
     )
 
+@app.post("/explain", response_model=ExplanationResponse)
+def explain(request: TransactionRequest):
+    try:
+        explanation = explain_transaction(request.features, top_n=8)
+        return explanation
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Explanation failed: {str(e)}"
+        )
 
 @app.post("/predict-batch")
 def predict_batch(requests: List[TransactionRequest]):

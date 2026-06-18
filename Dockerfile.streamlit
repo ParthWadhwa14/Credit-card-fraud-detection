@@ -12,8 +12,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY frontend ./frontend
 COPY models/scaler.pkl ./models/scaler.pkl
-COPY data/processed/X_test.csv ./data/processed/X_test.csv
-COPY data/processed/y_test.csv ./data/processed/y_test.csv
+
+COPY tests/fixtures/X_test_sample.csv ./data/processed/X_test.csv
+COPY tests/fixtures/y_test_sample.csv ./data/processed/y_test.csv
 
 EXPOSE 8501
 

@@ -1,0 +1,52 @@
+name: Fraud Detection CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  test-and-build:
+    name: Test API and Build Docker Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Check required project artifacts
+        run: |
+          test -f models/tuned_xgboost_weighted.pkl
+          test -f models/scaler.pkl
+          test -f reports/xgboost_champion_config.json
+          test -f tests/fixtures/X_test_sample.csv
+          test -f tests/fixtures/y_test_sample.csv
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Run tests
+        run: |
+          pytest -v
+
+      - name: Build FastAPI Docker image
+        run: |
+          docker build -t fraud-detection-api:ci .
+
+      - name: Build Streamlit Docker image
+        run: |
+          docker build -f Dockerfile.streamlit -t fraud-streamlit-ui:ci .
