@@ -3,30 +3,20 @@ numpy
 matplotlib
 seaborn
 
-imbalanced-learn
-shap==0.52.0
+scikit-learn==1.7.2
 xgboost==3.2.0
-scikit-learn==1.9.0
+shap==0.49.1
+imbalanced-learn
 lightgbm
+catboost
+
 optuna
 mlflow
-shap
+joblib
+
 fastapi
 uvicorn
 pydantic
-joblib
-pytest
-
-mlflow
-
-lightgbm
-catboost
-imbalanced-learn
-
-fastapi 
-uvicorn 
-pydantic
-
 requests
 python-multipart
 
@@ -34,8 +24,6 @@ prometheus-fastapi-instrumentator
 prometheus-client
 
 streamlit
-
-
 
 pytest
 httpx

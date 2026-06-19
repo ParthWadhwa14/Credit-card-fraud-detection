@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 from typing import List, Dict
-import shap
 
 import joblib
 import pandas as pd
@@ -139,6 +138,51 @@ def load_model():
     return joblib.load(MODEL_PATH)
 
 
+def coerce_base_value(base_value):
+    if isinstance(base_value, list):
+        return float(base_value[1])
+
+    try:
+        return float(base_value)
+    except TypeError:
+        return float(base_value[0])
+
+
+def get_tree_explainer():
+    global explainer
+
+    if explainer is None:
+        import shap
+
+        explainer = shap.TreeExplainer(model)
+
+    return explainer
+
+
+def get_shap_explanation_values(X: pd.DataFrame):
+    tree_explainer = get_tree_explainer()
+    shap_values = tree_explainer.shap_values(X)
+
+    # SHAP output can differ by version/model type.
+    # For binary classification, sometimes it returns a list [class_0, class_1].
+    if isinstance(shap_values, list):
+        shap_values_for_fraud = shap_values[1][0]
+    else:
+        shap_values_for_fraud = shap_values[0]
+
+    return shap_values_for_fraud, coerce_base_value(tree_explainer.expected_value)
+
+
+def get_xgboost_contribution_values(X: pd.DataFrame):
+    import xgboost as xgb
+
+    booster = model.get_booster()
+    contributions = booster.predict(xgb.DMatrix(X), pred_contribs=True)
+    row_contributions = contributions[0]
+
+    return row_contributions[:-1], float(row_contributions[-1])
+
+
 def explain_transaction(features: List[float], top_n: int = 8) -> Dict:
     validate_feature_length(features)
 
@@ -148,24 +192,10 @@ def explain_transaction(features: List[float], top_n: int = 8) -> Dict:
     prediction = int(fraud_probability >= DEPLOYMENT_THRESHOLD)
     risk_level = get_risk_level(fraud_probability, prediction)
 
-    shap_values = explainer.shap_values(X)
-
-    # SHAP output can differ by version/model type.
-    # For binary classification, sometimes it returns a list [class_0, class_1].
-    if isinstance(shap_values, list):
-        shap_values_for_fraud = shap_values[1][0]
-    else:
-        shap_values_for_fraud = shap_values[0]
-
-    base_value = explainer.expected_value
-
-    if isinstance(base_value, list):
-        base_value = float(base_value[1])
-    else:
-        try:
-            base_value = float(base_value)
-        except TypeError:
-            base_value = float(base_value[0])
+    try:
+        shap_values_for_fraud, base_value = get_shap_explanation_values(X)
+    except Exception:
+        shap_values_for_fraud, base_value = get_xgboost_contribution_values(X)
 
     explanation_rows = []
 
@@ -203,7 +233,7 @@ def explain_transaction(features: List[float], top_n: int = 8) -> Dict:
 model = load_model()
 config = load_config()
 DEPLOYMENT_THRESHOLD = float(config["deployment_threshold"])
-explainer = shap.TreeExplainer(model)
+explainer = None
 
 
 # ---------------------------------------------------------
