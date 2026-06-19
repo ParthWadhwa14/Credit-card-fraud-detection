@@ -1,6 +1,11 @@
 # Keep full datasets ignored
 data/raw/*
+# Ignore processed data by default
 data/processed/*
+
+# But keep processed test data for Streamlit demo
+!data/processed/X_test.csv
+!data/processed/y_test.csv
 
 # Keep test fixtures tracked for CI
 !tests/

@@ -6,11 +6,17 @@ metadata:
   labels:
     app: fraud-api
 spec:
-  replicas: 2
-  progressDeadlineSeconds: 600
+  replicas: 1
+  progressDeadlineSeconds: 900
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: fraud-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
@@ -20,6 +26,7 @@ spec:
         prometheus.io/path: "/metrics"
         prometheus.io/port: "8000"
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
         - name: fraud-api
           image: partthwadwa/fraud-detection-api:latest
@@ -31,25 +38,32 @@ spec:
           resources:
             requests:
               cpu: "250m"
-              memory: "512Mi"
+              memory: "768Mi"
             limits:
-              cpu: "1000m"
-              memory: "2Gi"
+              cpu: "1500m"
+              memory: "3Gi"
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 20
 
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 60
             periodSeconds: 15
             timeoutSeconds: 10
-            failureThreshold: 8
+            failureThreshold: 6
 
           livenessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 120
             periodSeconds: 30
             timeoutSeconds: 10
             failureThreshold: 5

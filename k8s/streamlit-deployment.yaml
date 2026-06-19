@@ -7,14 +7,22 @@ metadata:
     app: fraud-streamlit-ui
 spec:
   replicas: 1
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: fraud-streamlit-ui
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
         app: fraud-streamlit-ui
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
         - name: fraud-streamlit-ui
           image: partthwadwa/fraud-streamlit-ui:latest
@@ -34,23 +42,30 @@ spec:
               cpu: "200m"
               memory: "512Mi"
             limits:
-              cpu: "700m"
-              memory: "1Gi"
+              cpu: "1000m"
+              memory: "2Gi"
+
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8501
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 20
 
           readinessProbe:
             httpGet:
               path: /
               port: 8501
-            initialDelaySeconds: 25
             periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 5
+            timeoutSeconds: 10
+            failureThreshold: 6
 
           livenessProbe:
             httpGet:
               path: /
               port: 8501
-            initialDelaySeconds: 60
-            periodSeconds: 20
-            timeoutSeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 10
             failureThreshold: 5
