@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: fraud-streamlit-service
   namespace: fraud-detection
+  labels:
+    app: fraud-streamlit-ui
 spec:
   selector:
     app: fraud-streamlit-ui

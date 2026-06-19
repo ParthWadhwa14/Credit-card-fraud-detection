@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: fraud-api-service
   namespace: fraud-detection
+  labels:
+    app: fraud-api
 spec:
   selector:
     app: fraud-api
@@ -10,4 +12,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8000
-  type: LoadBalancer
+  type: ClusterIP
