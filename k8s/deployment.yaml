@@ -21,8 +21,9 @@ spec:
     spec:
       containers:
         - name: fraud-api
-          image: fraud-detection-api:latest
-          imagePullPolicy: IfNotPresent
+          image: partthwadwa/fraud-detection-api:latest
+          imagePullPolicy: Always
+
           ports:
             - containerPort: 8000
 
@@ -38,12 +39,16 @@ spec:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 10
+            initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
 
           livenessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 20
+            initialDelaySeconds: 40
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5

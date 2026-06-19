@@ -17,8 +17,8 @@ spec:
     spec:
       containers:
         - name: fraud-streamlit-ui
-          image: fraud-streamlit-ui:latest
-          imagePullPolicy: IfNotPresent
+          image: partthwadwa/fraud-streamlit-ui:latest
+          imagePullPolicy: Always
 
           ports:
             - containerPort: 8501
@@ -41,12 +41,16 @@ spec:
             httpGet:
               path: /
               port: 8501
-            initialDelaySeconds: 15
+            initialDelaySeconds: 25
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
 
           livenessProbe:
             httpGet:
               path: /
               port: 8501
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 5
