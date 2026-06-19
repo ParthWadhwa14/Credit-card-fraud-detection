@@ -2,9 +2,11 @@ pandas
 numpy
 matplotlib
 seaborn
-scikit-learn
+
 imbalanced-learn
-xgboost
+shap==0.52.0
+xgboost==3.2.0
+scikit-learn==1.9.0
 lightgbm
 optuna
 mlflow
@@ -16,7 +18,7 @@ joblib
 pytest
 
 mlflow
-xgboost
+
 lightgbm
 catboost
 imbalanced-learn
@@ -33,7 +35,7 @@ prometheus-client
 
 streamlit
 
-shap
+
 
 pytest
 httpx
